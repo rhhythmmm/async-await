@@ -49,6 +49,7 @@ const renderCountry = function (data, className = '') {
   </article>`;
 
   countriesContainer.insertAdjacentHTML('beforeend', html);
+  countriesContainer.style.opacity = 1;
 };
 
 const getCountryAndNeighbour = function (country) {
@@ -197,41 +198,146 @@ const getCountryData = function (country) {
 //     return wait(1);
 // }).then(console.log(`I waited 1 sec`));
 
+// const getPosition = function () {
+//     return new Promise(function (resolve, reject) {
+//       // navigator.geolocation.getCurrentPosition(
+//       //   position => resolve(position),
+//       //   err => reject(err)
+//       // );
+//       navigator.geolocation.getCurrentPosition(resolve, reject);
+//     });
+//   };
+//   getPosition().then(pos => console.log(pos));
+
+//   const whereAmI = function () {
+//     getPosition()
+//       .then(pos => {
+//         const { latitude: lat, longitude: lng } = pos.coords;
+
+//         return fetch(`https://geocode.xyz/${lat},${lng}?geoit=json`);
+//       })
+//       .then(res => {
+//         if (!res.ok) throw new Error(`Problem with geocoding ${res.status}`);
+//         return res.json();
+//       })
+//       .then(data => {
+//         console.log(data);
+//         console.log(`You are in ${data.city}, ${data.country}`);
+
+//         return fetch(`https://restcountries.com/v2/name/${data.country}`);
+//       })
+//       .then(res => {
+//         if (!res.ok) throw new Error(`Country not found (${res.status})`);
+
+//         return res.json();
+//       })
+//       .then(data => getCountryData(data[0]))
+//       .catch(err => console.error(`${err.message} 💥`));
+//   };
+
+//   btn.addEventListener('click', whereAmI);
+
 const getPosition = function () {
-    return new Promise(function (resolve, reject) {
-      // navigator.geolocation.getCurrentPosition(
-      //   position => resolve(position),
-      //   err => reject(err)
-      // );
-      navigator.geolocation.getCurrentPosition(resolve, reject);
-    });
-  };
-  // getPosition().then(pos => console.log(pos));
-  
-  const whereAmI = function () {
-    getPosition()
-      .then(pos => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-  
-        return fetch(`https://geocode.xyz/${lat},${lng}?geoit=json`);
-      })
-      .then(res => {
-        if (!res.ok) throw new Error(`Problem with geocoding ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        console.log(data);
-        console.log(`You are in ${data.city}, ${data.country}`);
-  
-        return fetch(`https://restcountries.eu/rest/v2/name/${data.country}`);
-      })
-      .then(res => {
-        if (!res.ok) throw new Error(`Country not found (${res.status})`);
-  
-        return res.json();
-      })
-      .then(data => getCountryData(data[0]))
-      .catch(err => console.error(`${err.message} 💥`));
-  };
-  
-  btn.addEventListener('click', whereAmI);
+  return new Promise(function (resolve, reject) {
+    navigator.geolocation.getCurrentPosition(resolve, reject);
+  });
+};
+
+const whereAmI = async function () {
+  try {
+    const pos = await getPosition();
+    const { latitude: lat, longitude: lng } = pos.coords;
+    const resGeo = await fetch(`https://geocode.xyz/${lat},${lng}?geoit=json`);
+    if (!resGeo.ok) throw new Error('Problem Getting Location Data');
+    const dataGeo = await resGeo.json();
+    const res = await fetch(
+      `https://restcountries.com/v2/name/${dataGeo.country}`
+    );
+    if (!res.ok) throw new Error('Problem Getting Location Data');
+    const data = await res.json();
+    renderCountry(data[0]);
+    return `You are in ${dataGeo.city}, ${dataGeo.country}`;
+  } catch (err) {
+    console.error(`${err} 💥`);
+    renderError(`Something went wrong 💥 ${err.message}`);
+  }
+};
+
+// console.log(`1: Will Get The Location`);
+// const city = whereAmI();
+// console.log(city);
+// whereAmI()
+//   .then(city => console.log(`2: ${city}`))
+//   .catch(err => console.error(`2: ${err.message} 💥`))
+//   .finally(() => console.log(`3: Finished Getting the Loaction`));
+
+// (async function(){
+//   try{
+//     const city = await whereAmI();
+//   }
+//   catch(err){
+//     console.error(`2: ${err.message} 💥`)
+//   }
+//   console.log(`3: Finished Getting the Loaction`)
+// })
+
+// try {
+//   let x = 1;
+//   const y = 2;
+//   y = 3;
+// } catch (err) {
+//   alert(err.message);
+// }
+
+// const get3Countries = async function (c1, c2, c3) {
+//   try {
+//     // const [data1] = await getJSON(`https://restcountries.com/v2/name/${c1}`);
+//     // const [data2] = await getJSON(`https://restcountries.com/v2/name/${c2}`);
+//     // const [data3] = await getJSON(`https://restcountries.com/v2/name/${c3}`);
+//     // console.log([data1.capital, data2.capital, data3.capital]);
+
+//     const data = await Promise.all([
+//       await getJSON(`https://restcountries.com/v2/name/${c1}`),
+//       await getJSON(`https://restcountries.com/v2/name/${c2}`),
+//       await getJSON(`https://restcountries.com/v2/name/${c3}`),
+//     ]);
+//     console.log(data.map(d=> d[0].capital))
+//   } catch (err) {
+//     console.error(err);
+//   }
+// };
+
+// get3Countries('china', 'russia', 'portugal');
+
+(async function(){
+  const res = await Promise.race([
+    await getJSON(`https://restcountries.com/v2/name/italy`),
+    await getJSON(`https://restcountries.com/v2/name/egypt`),
+    await getJSON(`https://restcountries.com/v2/name/china`),
+  ])
+  console.log(res[0]);
+})();
+
+const timeout = function(sec){
+  return new Promise(function(_, reject){
+    setTimeout(function(){
+      reject(new Error('Request Took Too Long!!!'))
+    },sec*1000)
+  })
+}
+
+Promise.race([
+  getJSON(`https://restcountries.com/v2/name/china`),timeout(1)
+]).then(res => console.log(res[0])).catch(err => console.log(err))
+
+// Promise.allSettled([
+//   Promise.resolve('Success'),
+//   Promise.reject('ERROR'),
+//   Promise.resolve('Another Success'),
+// ]).then(res => console.log(res))
+
+Promise.any([
+  Promise.resolve('Success'),
+  Promise.reject('ERROR'),
+  Promise.resolve('Another Success'),
+]).then(res => console.log(res))
